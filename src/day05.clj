@@ -22,7 +22,6 @@
 
 (defn get-num-columns
   [s]
-  (println "running get-num-columns...")
   (/ (+ (count s) 1) 4))
 
 (defn is-space?
@@ -84,7 +83,6 @@
 
 (defn process-moves
   [crate-locations moves]
-  (println [crate-locations moves])
   (loop [crate-locations crate-locations moves moves]
     (if (= 0 (count moves))
       crate-locations
@@ -92,6 +90,32 @@
 
 (defn get-top-crates [m]
   (apply str (map last (vals (sort m)))))
+
+(defn move-crates-part2
+  [crate-locations move]
+  (let [num-moves (nth move 0)
+        from-idx (nth move 1)
+        to-idx (nth move 2)
+        from (crate-locations from-idx)
+        crates (take-last num-moves from)
+        drop-last (partial drop-last num-moves)]
+\    (-> crate-locations
+        (update from-idx drop-last)
+        (update to-idx concat crates))))
+
+(defn process-moves-part2
+  [crate-locations moves]
+  (loop [crate-locations crate-locations moves moves]
+    (if (= 0 (count moves))
+      crate-locations
+      (recur (move-crates-part2 crate-locations (first moves)) (rest moves)))))
+
+(defn part-two [filename]
+  (let [rules (get-rules filename)]
+    (-> (get-top-portion filename)
+        (get-starting-locations)
+        (process-moves-part2 rules)
+        (get-top-crates))))
 
 (defn part-one [filename]
   (let [rules (get-rules filename)]
@@ -103,3 +127,5 @@
 (assert (= "CMZ" (part-one "day05_sample.txt")))
 (part-one "day05.txt")
 
+(assert (= "MCD" (part-two "day05_sample.txt")))
+(part-two "day05.txt")
