@@ -1,16 +1,3 @@
 {{:paths ["src", "data"]}
-
-
- {:deps
-  {;; example maven dep
-   org.clojure/core.match {:mvn/version "1.0.0"}
-
-;;   ;; example git dep
-;;   io.github.sally/awesome {:tag "v1.2.3" :sha "123abcd"}
-
-;;   ;; example local project
-;;   my.dev/project {:local/root "../project"}
-
-;;   ;; example local jar
-;;   my.driver/jar {:local/root "../libs/driver.jar"}}
-   }}}
+ {:deps 
+  {org.clojure/core.match {:mvn/version "1.0.0"}}}}
