@@ -99,7 +99,7 @@
         from (crate-locations from-idx)
         crates (take-last num-moves from)
         drop-last (partial drop-last num-moves)]
-\    (-> crate-locations
+    (-> crate-locations
         (update from-idx drop-last)
         (update to-idx concat crates))))
 
