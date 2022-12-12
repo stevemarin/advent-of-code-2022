@@ -3,7 +3,7 @@
             [clojure.string :as str]
             [clojure.edn :as edn]))
 
-(def initialize-directory {:files [] :size 0})
+(def initialize-directory {:files []})
 
 (defn get-file-object
   [line]
@@ -20,7 +20,7 @@
   (cond
     (nil? file-object) file-system
     (list? file-object) (update-in file-system (conj cwd :files) #(conj % file-object))
-    (list? file-object) (update-in file-system (conj cwd file-object) initialize-directory)
+    (string? file-object) (update-in file-system (conj cwd file-object) initialize-directory)
     ))
 
 (defn update-cwd
@@ -30,14 +30,14 @@
     (str/starts-with? line "$ cd ") (conj cwd (last (str/split line #" ")))
     :else cwd))
 
-(defn get-index
-  [lists index]
-  (if (int? index)
-    (get lists index)
-    (loop [lists lists index index]
-      (if (empty? index)
-        lists
-        (recur (get lists (first index)) (pop index))))))
+;; (defn get-index
+;;   [lists index]
+;;   (if (int? index)
+;;     (get lists index)
+;;     (loop [lists lists index index]
+;;       (if (empty? index)
+;;         lists
+;;         (recur (get lists (first index)) (pop index))))))
 
 (defn get-input
   [filename]
@@ -47,12 +47,14 @@
         file-system
         (let [line (first lines)
               object (get-file-object line)
-              updated (update-file-system object cwd file-system)]
+              file-system (update-file-system object cwd file-system)]
           (println "aaa" (update-cwd line cwd) object)
           (println "ccc" file-system)
-          (recur (rest lines) (update-cwd line cwd) updated))))))
+          (recur (rest lines) (update-cwd line cwd) file-system))))))
 
-(get-input "day07_sample.txt")
+(def bbb (get-input "day07_sample.txt"))
+
+(get-in bbb ["/" "a" "e"])
 
 (def aaa
   {"/" {:files '('("b.txt" 14848514)
@@ -69,11 +71,11 @@
                       '("k" 7214296))
              :size (+ 4060174 8033020 5626152 7214296)}}})
 
-aaa
+;; aaa
 
-(get-index aaa '("/" "a" :files))
-(update-in aaa ["/" "a" :files] #(conj % '(1 1)))
-(update-in aaa ["/" "a" "bbbbb"] (initialize-directory))
+;; (get-index aaa '("/" "a" :files))
+;; (update-in aaa ["/" "a" :files] #(conj % '(1 1)))
+;; (update-in aaa ["/" "a" "bbbbb"] (initialize-directory))
 
 
 "
