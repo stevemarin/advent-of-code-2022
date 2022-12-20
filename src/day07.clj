@@ -3,7 +3,7 @@
             [clojure.string :as str]
             [clojure.edn :as edn]))
 
-(def initialize-directory {:files []})
+(def initialize-directory {:files [] :size 0})
 
 (defn get-file-object
   [line]
@@ -15,13 +15,29 @@
                 name (last tmp)]
             (list name size))))
 
+(defn parent-paths
+  [cwd]
+  (loop [cwd cwd
+         out []]
+    (if (empty? cwd)
+      out
+      (recur (pop cwd) (conj out cwd)))))
+
 (defn update-file-system
   [file-object cwd file-system]
   (cond
+    ;; if it's not a file list or directory, just return current file system
     (nil? file-object) file-system
-    (list? file-object) (update-in file-system (conj cwd :files) #(conj % file-object))
-    (string? file-object) (update-in file-system (conj cwd file-object) initialize-directory)
-    ))
+    ;; if it's a file & size, append
+    (list? file-object) (let [file-system (update-in file-system (conj cwd :files) #(conj % file-object))]
+                          ;; file-system
+                          (loop [file-system file-system paths (parent-paths cwd)]
+                            (if (empty? paths)
+                              file-system
+                              (recur (update-in file-system (conj (peek paths) :size) + (last file-object)) (pop paths)))))
+                          ;; )
+    ;; and if it's a directory, create and add it
+    (string? file-object) (assoc-in file-system (conj cwd file-object) initialize-directory)))
 
 (defn update-cwd
   [line cwd]
@@ -30,14 +46,13 @@
     (str/starts-with? line "$ cd ") (conj cwd (last (str/split line #" ")))
     :else cwd))
 
-;; (defn get-index
-;;   [lists index]
-;;   (if (int? index)
-;;     (get lists index)
-;;     (loop [lists lists index index]
-;;       (if (empty? index)
-;;         lists
-;;         (recur (get lists (first index)) (pop index))))))
+(defn flatten-keys [m]
+  (if (not (map? m))
+    {[] m}
+    (into {}
+          (for [[k v] m
+                [ks v'] (flatten-keys v)]
+            [(cons k ks) v']))))
 
 (defn get-input
   [filename]
@@ -48,73 +63,30 @@
         (let [line (first lines)
               object (get-file-object line)
               file-system (update-file-system object cwd file-system)]
-          (println "aaa" (update-cwd line cwd) object)
-          (println "ccc" file-system)
           (recur (rest lines) (update-cwd line cwd) file-system))))))
 
-(def bbb (get-input "day07_sample.txt"))
+(defn part-one
+  [path]
+  (->> (get-input path)
+       (flatten-keys)
+       (filter (comp integer? last))
+       (filter (comp #(> 100000 %) last))
+       (map last)
+       (reduce +)))
 
-(get-in bbb ["/" "a" "e"])
+(part-one "day07_sample.txt")
+(part-one "day07.txt")
 
-(def aaa
-  {"/" {:files '('("b.txt" 14848514)
-                 '("c.dat" 8504156))
-        :size (+ 14848514 8504156 29116 2557 62596 584 4060174 8033020 5626152 7214296)
-        "a" {:files '('("f" 29116)
-                      '("g" 2557)
-                      '("h.lst" 62596))
-             :size (+ 29116 2557 62596 584)
-             "e" {:files '('("i" 584)) :size 584}}
-        "d" {:files '('("j" 4060174)
-                      '("d.log" 8033020)
-                      '("d.ext" 5626152)
-                      '("k" 7214296))
-             :size (+ 4060174 8033020 5626152 7214296)}}})
+(defn part-two
+  [path]
+  (let [input (get-input path)]
+  (->> input
+       (flatten-keys)
+       (filter (comp integer? last))
+       (sort-by last)
+       (filter (comp #(>= % (- 30000000 (- 70000000 (get-in input ["/" :size])))) last))
+       (first)
+       )))
 
-;; aaa
-
-;; (get-index aaa '("/" "a" :files))
-;; (update-in aaa ["/" "a" :files] #(conj % '(1 1)))
-;; (update-in aaa ["/" "a" "bbbbb"] (initialize-directory))
-
-
-"
-- / (dir)
-  - a (dir)
-    - e (dir)
-      - i (file, size=584)
-    - f (file, size=29116)
-    - g (file, size=2557)
-    - h.lst (file, size=62596)
-  - b.txt (file, size=14848514)
-  - c.dat (file, size=8504156)
-  - d (dir)
-    - j (file, size=4060174)
-    - d.log (file, size=8033020)
-    - d.ext (file, size=5626152)
-    - k (file, size=7214296)
-
-$ cd /
-$ ls
-dir a
-14848514 b.txt
-8504156 c.dat
-dir d
-$ cd a
-$ ls
-dir e
-29116 f
-2557 g
-62596 h.lst
-$ cd e
-$ ls
-584 i
-$ cd ..
-$ cd ..
-$ cd d
-$ ls
-4060174 j
-8033020 d.log
-5626152 d.ext
-7214296 k
-"
+(part-two "day07_sample.txt")
+(part-two "day07.txt")
