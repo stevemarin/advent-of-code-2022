@@ -6,15 +6,7 @@
 
 (defn mat-to-nums
   [m]
-  (apply vector (for [row m] (apply vector (map edn/read-string row)))))
-
-(defn row
-  [arr row-idx]
-  (get arr row-idx))
-
-(defn column
-  [arr column-idx]
-  (apply vector (map #(row % column-idx) arr)))
+  (for [row m] (map edn/read-string row)))
 
 (defn get-input
   [filename]
@@ -26,51 +18,39 @@
        (mat-to-nums)))
 
 (defn get-mask-array
-  [arr]
+  [row]
   (loop [max-so-far -1
-         mask []
-         arr arr]
-    (if (empty? arr)
-      mask
-      (let [current (first arr)
+         mask '()
+         row row]
+    (if (empty? row)
+      (reverse mask)
+      (let [current (first row)
             current-max (max max-so-far current)
             current-mask (if (> current max-so-far) 1 0)]
-        (recur current-max (conj mask current-mask) (rest arr))))))
+        (recur current-max (conj mask current-mask) (next row))))))
 
-(defn get-mask-mat
-  [arr f1 f2]
-  (apply vector
-         (for [idx (range 5)]
-           (-> (f1 arr idx)
-               (f2)
-               (get-mask-array)))))
+(defn get-mask-matrix
+  [mat]
+  (for [idx (range (count mat))]
+    (get-mask-array (nth mat idx))))
 
 (defn part-one
   [filename]
-  (let [input (get-input "day08_sample.txt")
-        l-to-r (get-mask-mat input row identity)
-        r-to-l (map reverse (get-mask-mat input row reverse))
-        t-to-b (mat/transpose (get-mask-mat input column identity))
-        b-to-t (map reverse (mat/transpose (get-mask-mat input column reverse)))
-        ]
-    ;; (mat/add l-to-r r-to-l ;t-to-b b-to-t
-    ;;          ) 
-    r-to-l
-    ))
+  (let [input (get-input filename)
+        l-to-r (get-mask-matrix input)
+        r-to-l (map reverse (get-mask-matrix (map reverse input)))
+        t-to-b (mat/transpose (get-mask-matrix (mat/transpose input)))
+        b-to-t (mat/transpose (map reverse (get-mask-matrix (map reverse (mat/transpose input)))))]
+    (->> (reduce mat/add [l-to-r r-to-l t-to-b b-to-t])
+         (flatten)
+         (filter #(> % 0))
+         (count))))
 
-(def a (get-input "day08_sample.txt"))
+(part-one "day08_sample.txt")
+(part-one "day08.txt")
 
-(for [r a] (println r))
-(for [r (part-one "ieaifn")] (println r))
+(def input (get-input "day08_sample.txt"))
+(for [row input] (println row))
 
-
-
-(-> (get-input "day08_sample.txt")
-    (get-mask-mat row identity))
-
-(->> (part-one "ieaifn")
-    ;;  (flatten)
-    ;;  (filter #(> % 0))
-    ;;  (count)
-     )
-
+(for [a input] (println a))
+(for [a (get-mask-matrix input)] (println a))
