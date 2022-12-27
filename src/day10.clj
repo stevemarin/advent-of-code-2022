@@ -37,8 +37,6 @@
    (flatten)
    (cumsum 1)))
 
-(def values (get-values "day10.txt"))
-
 (defn part-one
   [filename]
   (let [values (get-values filename)]
@@ -47,8 +45,6 @@
         total
         (recur (+ idx 40) (+ total (* idx (nth values (dec idx)))))))))
 
-(assert (=  (part-one "day10_sample2.txt") 13140))
-(part-one "day10.txt")
 
 (defn part-two
   [filename]
@@ -57,6 +53,9 @@
                        (for [idx (range 240)]
                          (if (< (abs (- (mod idx 40) (nth values idx))) 2) "@" " ")))]
       (str/join "" r))))
+
+(assert (=  (part-one "day10_sample2.txt") 13140))
+(part-one "day10.txt")
 
 (part-two "day10_sample2.txt")
 (part-two "day10.txt") ;; PLGFKAZG
