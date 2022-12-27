@@ -20,7 +20,7 @@
   [start values]
   (loop [values values totals (list start)]
     (if (empty? values)
-      (pop (reverse totals))
+      (reverse totals)
       (recur (rest values) (conj totals (+ (first totals) (first values)))))))
 
 (defn get-values
@@ -37,7 +37,7 @@
    (flatten)
    (cumsum 1)))
 
-(get-values "day10_sample.txt")
+(def values (get-values "day10.txt"))
 
 (defn part-one
   [filename]
@@ -45,7 +45,18 @@
     (loop [idx 20 total 0]
       (if (> idx 220)
         total
-        (recur (+ idx 40) (+ total (* idx (nth values (dec (dec idx))))))))))
+        (recur (+ idx 40) (+ total (* idx (nth values (dec idx)))))))))
 
 (assert (=  (part-one "day10_sample2.txt") 13140))
 (part-one "day10.txt")
+
+(defn part-two
+  [filename]
+  (let [values (get-values filename)]
+    (for [r (partition 40
+                       (for [idx (range 240)]
+                         (if (< (abs (- (mod idx 40) (nth values idx))) 2) "@" " ")))]
+      (str/join "" r))))
+
+(part-two "day10_sample2.txt")
+(part-two "day10.txt") ;; PLGFKAZG
