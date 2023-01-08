@@ -32,48 +32,47 @@
 ;; merge these two functions into one accepting :row or :col
 
 (defn set-col-slice
-  [cave x y-start y-end]
-  (let [y-min (min y-start y-end)
-        y-max (max y-start y-end)]
+  [cave offset-x offset-y x y-start y-end]
+  (let [y-min (- (min y-start y-end) offset-y)
+        y-max (- (max y-start y-end) offset-y)]
     (doseq [y (range y-min (inc y-max))]
-      (println "setting col" y x)
-      (m/mset! cave y x 1)))
+      (m/mset! cave y (- x offset-x) 1)))
   cave)
 
 (defn set-row-slice
-  [cave y x-start x-end]
-  (let [x-min (min x-start x-end)
-        x-max (max x-start x-end)]
+  [cave offset-x offset-y y x-start x-end]
+  (let [x-min (- (min x-start x-end) offset-x)
+        x-max (- (max x-start x-end) offset-x)]
     (doseq [x (range x-min (inc x-max))]
-      (println "setting row" y x)
-      (m/mset! cave y x 1)))
+      (m/mset! cave (- y offset-y) x 1)))
   cave)
 
 (defn one-line
-  [cave line]
+  [cave offset-x offset-y line]
   (let [[x-start y-start x-end y-end] line]
-    (println "aaa" x-start x-end y-start y-end)
     (cond
-      (= x-start x-end) (set-col-slice cave x-start y-start y-end)
-      (= y-start y-end) (set-row-slice cave y-start x-start x-end))
+      (= x-start x-end) (set-col-slice cave offset-x offset-y x-start y-start y-end)
+      (= y-start y-end) (set-row-slice cave offset-x offset-y y-start x-start x-end))
     cave))
 
 (defn one-formation
-  [cave formation]
-  (doseq [part formation] (one-line cave part))
+  [cave offset-x offset-y formation]
+  (doseq [part formation] (one-line cave offset-x offset-y part))
   cave)
 
 (defn all-formations
   [formations]
   (let [[min-x max-x min-y max-y] (all-extremes formations)
-        ;; x-shape (+ 5 (- max-x min-x))
-        ;; y-shape (+ 5 (- max-y min-y))
-        ;; shape (map #(+ 5 %) [y-shape x-shape])
-        shape (map #(+ 5 %) [max-y max-x])
+        offset 5
+        offset-x (- min-x offset)
+        offset-y (- min-y offset)
+        x-shape (- max-x offset-x)
+        y-shape (- max-y offset-y)
+        shape (map #(+ offset %) [y-shape x-shape])
         cave (m/mutable (m/zero-array shape))]
     (println "shape:" shape)
-    (doseq [formation formations] (one-formation cave formation))
-    cave))
+    (doseq [formation formations] (one-formation cave offset-x offset-y formation))
+    {:cave cave :offset-x offset-x :offset-y offset-y}))
 
 (defn read-file
   [filename]
@@ -84,13 +83,11 @@
        line-seq
        (map process-line)))
 
-
-(read-file "day14_sample.txt")
-
+;; (def formations (read-file "day14.txt"))
 (def formations (read-file "day14_sample.txt"))
-(all-extremes formations)
+(def aaa (:cave (all-formations formations)))
+(def rows (m/row-count aaa))
 
-(all-formations formations)
-
-;; add plotting for qa
-;; try to reduce size of matrix (row/col offset)
+(doseq [tmp
+      (map str/join (m/transpose (partition rows (replace {0.0 "." 1 "#"} (flatten (m/transpose aaa))))))]
+  (println tmp))
