@@ -7,19 +7,16 @@
 (defn formation-extremes
   [f dim formations]
   (let [formations (flatten formations)
-        ;; gotta take all xs or ys and data are (x y x y x y...) so
-        ;; we partiion and just drop first element for ys
+        ;; gotta take all xs or ys and data are (col row col row..) so
+        ;; we partiion and just drop first element for rows
         formations (cond
-                     (= dim  :x) formations
-                     (= dim :y) (rest formations))]
-    (->> formations
-         (partition 1 2)
-         flatten
-         (reduce f))))
+                     (= dim :col) formations
+                     (= dim :row) (rest formations))]
+    (->> formations (partition 1 2) flatten (reduce f))))
 
 (defn all-extremes
   [formations]
-  (for [dim [:x :y] f [min max]] (formation-extremes f dim formations)))
+  (for [dim [:row :col] f [min max]] (formation-extremes f dim formations)))
 
 (defn process-line
   [line]
@@ -29,65 +26,99 @@
        flatten
        (partition 4 2)))
 
-;; merge these two functions into one accepting :row or :col
-
-(defn set-col-slice
-  [cave offset-x offset-y x y-start y-end]
-  (let [y-min (- (min y-start y-end) offset-y)
-        y-max (- (max y-start y-end) offset-y)]
-    (doseq [y (range y-min (inc y-max))]
-      (m/mset! cave y (- x offset-x) 1)))
+(defn set-slice!
+  [cave offsets rows cols]
+  (let [[start-row end-row] rows
+        [start-col end-col] cols
+        [offset-row offset-col] offsets
+        min-row (min start-row end-row)
+        max-row (max start-row end-row)
+        min-col (min start-col end-col)
+        max-col (max start-col end-col)]
+    (doseq [row (range min-row (inc max-row))
+            col (range min-col (inc max-col))]
+      (m/mset! cave (- row offset-row) (- col offset-col) 1.0)))
   cave)
-
-(defn set-row-slice
-  [cave offset-x offset-y y x-start x-end]
-  (let [x-min (- (min x-start x-end) offset-x)
-        x-max (- (max x-start x-end) offset-x)]
-    (doseq [x (range x-min (inc x-max))]
-      (m/mset! cave (- y offset-y) x 1)))
-  cave)
-
-(defn one-line
-  [cave offset-x offset-y line]
-  (let [[x-start y-start x-end y-end] line]
-    (cond
-      (= x-start x-end) (set-col-slice cave offset-x offset-y x-start y-start y-end)
-      (= y-start y-end) (set-row-slice cave offset-x offset-y y-start x-start x-end))
-    cave))
 
 (defn one-formation
-  [cave offset-x offset-y formation]
-  (doseq [part formation] (one-line cave offset-x offset-y part))
+  [cave offsets formation]
+  (doseq
+   [part formation]
+    (let [[start-col start-row end-col end-row] part]
+      (println "one-formation" start-row start-col end-col end-row)
+      (set-slice! cave offsets [start-row end-row] [start-col end-col])))
   cave)
 
 (defn all-formations
   [formations]
-  (let [[min-x max-x min-y max-y] (all-extremes formations)
-        offset 5
-        offset-x (- min-x offset)
-        offset-y (- min-y offset)
-        x-shape (- max-x offset-x)
-        y-shape (- max-y offset-y)
-        shape (map #(+ offset %) [y-shape x-shape])
-        cave (m/mutable (m/zero-array shape))]
-    (println "shape:" shape)
-    (doseq [formation formations] (one-formation cave offset-x offset-y formation))
-    {:cave cave :offset-x offset-x :offset-y offset-y}))
+  (let [[start-row end-row start-col end-col] (all-extremes formations)
+        min-row (min start-row end-row)
+        max-row (max start-row end-row)
+        min-col (min start-col end-col)
+        max-col (max start-col end-col)
 
-(defn read-file
+        offset 5
+        offset-row (- min-row offset)
+        num-rows (- max-row offset-row)
+        offset-col (- min-col offset)
+        num-cols (- max-col offset-col)
+
+        shape (map #(+ offset %) [num-rows num-cols])
+        cave (m/mutable (m/zero-array shape))]
+    (doseq [formation formations] (one-formation cave [offset-row offset-col] formation))
+    {:cave cave :offset-row offset-row :offset-col offset-col}))
+
+(defn get-cave
   [filename]
   (->> filename
        (format "data/%s")
        io/file
        io/reader
        line-seq
-       (map process-line)))
+       (map process-line)
+       all-formations))
 
-;; (def formations (read-file "day14.txt"))
-(def formations (read-file "day14_sample.txt"))
-(def aaa (:cave (all-formations formations)))
-(def rows (m/row-count aaa))
+(def cave (get-cave "day14.txt"))
+;; (def cave (get-cave "day14_sample.txt"))
+cave
 
-(doseq [tmp
-      (map str/join (m/transpose (partition rows (replace {0.0 "." 1 "#"} (flatten (m/transpose aaa))))))]
+(def cols (m/column-count (:cave cave)))
+
+(defn check-location
+  [row col cave]
+  (if (= 0.0 (m/mget cave row col))
+    (list row col)
+    nil))
+
+(defn new-location
+  [[row col] cave]
+  (or (check-location (inc row) col cave)
+      (check-location (inc row) (dec col) cave)
+      (check-location (inc row) (inc col) cave)))
+
+(defn drop-sand
+  [cave]
+  (let [{:keys [cave offset-col]} cave
+        max-row (- (m/row-count cave) 2)
+        start-loc [0 (- 500 offset-col)]]
+    (loop [cave (m/clone cave)
+           prev-loc start-loc
+           loc (new-location start-loc cave)
+           num-drops 0]
+      (cond
+        (nil? loc) (do (m/mset! cave (first prev-loc) (second prev-loc) 1.0)
+                       (recur cave start-loc (new-location start-loc cave) (inc num-drops)))
+        (= max-row (first loc)) num-drops
+        :else (recur cave loc (new-location prev-loc cave) num-drops)))))
+
+(drop-sand cave)
+
+(doseq [tmp (->> (:cave cave)
+                 flatten
+                 (replace {0.0 "." 1.0 "#"})
+                 (partition cols)
+                 (map str/join))]
   (println tmp))
+
+(map #(reduce + %) (m/rows (:cave cave)))
+
