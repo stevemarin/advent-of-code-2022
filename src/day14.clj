@@ -57,13 +57,14 @@
         min-col (min start-col end-col)
         max-col (max start-col end-col)
 
-        offset 5
-        offset-row (- min-row offset)
+        offset-rows 4
+        offset-cols 50
+        offset-row (- min-row offset-rows)
         num-rows (- max-row offset-row)
-        offset-col (- min-col offset)
+        offset-col (- min-col offset-cols)
         num-cols (- max-col offset-col)
 
-        shape (map #(+ offset %) [num-rows num-cols])
+        shape [(+ num-rows offset-rows) (+ num-cols offset-cols)]
         cave (m/mutable (m/zero-array shape))]
     (doseq [formation formations] (one-formation cave [offset-row offset-col] formation))
     {:cave cave :offset-row offset-row :offset-col offset-col}))
@@ -78,8 +79,8 @@
        (map process-line)
        all-formations))
 
-(def cave (get-cave "day14.txt"))
-;; (def cave (get-cave "day14_sample.txt"))
+;; (def cave (get-cave "day14.txt"))
+(def cave (get-cave "day14_sample.txt"))
 cave
 
 (def cols (m/column-count (:cave cave)))
