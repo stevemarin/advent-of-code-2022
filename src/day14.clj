@@ -45,20 +45,19 @@
   (doseq
    [part formation]
     (let [[start-col start-row end-col end-row] part]
-      (println "one-formation" start-row start-col end-col end-row)
       (set-slice! cave offsets [start-row end-row] [start-col end-col])))
   cave)
 
 (defn all-formations
   [formations]
   (let [[start-row end-row start-col end-col] (all-extremes formations)
-        min-row (min start-row end-row)
-        max-row (max start-row end-row)
+        min-row 0
+        max-row (+ 3 (max start-row end-row))
         min-col (min start-col end-col)
         max-col (max start-col end-col)
 
-        offset-rows 4
-        offset-cols 50
+        offset-rows 0
+        offset-cols 150
         offset-row (- min-row offset-rows)
         num-rows (- max-row offset-row)
         offset-col (- min-col offset-cols)
@@ -69,6 +68,14 @@
     (doseq [formation formations] (one-formation cave [offset-row offset-col] formation))
     {:cave cave :offset-row offset-row :offset-col offset-col}))
 
+(defn add-floor
+  [cave]
+  (let [c (:cave cave)
+        [num-rows num-cols] (m/shape c)]
+    (m/set-row! c (dec num-rows) (repeat num-cols 1.0))
+    ;; (m/set-row! c (dec (dec num-rows)) (repeat num-cols 1.0))
+    (assoc cave :cave c)))
+
 (defn get-cave
   [filename]
   (->> filename
@@ -77,13 +84,8 @@
        io/reader
        line-seq
        (map process-line)
-       all-formations))
-
-;; (def cave (get-cave "day14.txt"))
-(def cave (get-cave "day14_sample.txt"))
-cave
-
-(def cols (m/column-count (:cave cave)))
+       all-formations
+       add-floor))
 
 (defn check-location
   [row col cave]
@@ -97,9 +99,10 @@ cave
       (check-location (inc row) (dec col) cave)
       (check-location (inc row) (inc col) cave)))
 
-(defn drop-sand
-  [cave]
-  (let [{:keys [cave offset-col]} cave
+(defn part-one
+  [filename]
+  (let [cave (get-cave filename)
+        {:keys [cave offset-col]} cave
         max-row (- (m/row-count cave) 2)
         start-loc [0 (- 500 offset-col)]]
     (loop [cave (m/clone cave)
@@ -107,18 +110,55 @@ cave
            loc (new-location start-loc cave)
            num-drops 0]
       (cond
-        (nil? loc) (do (m/mset! cave (first prev-loc) (second prev-loc) 1.0)
-                       (recur cave start-loc (new-location start-loc cave) (inc num-drops)))
+        (nil? loc) (do
+                     (println "on to drop" (inc num-drops))
+                     (m/mset! cave (first prev-loc) (second prev-loc) 1.0)
+                     (recur cave start-loc (new-location start-loc cave) (inc num-drops)))
         (= max-row (first loc)) num-drops
         :else (recur cave loc (new-location prev-loc cave) num-drops)))))
 
-(drop-sand cave)
+(part-one "day14_sample.txt")
+(part-one "day14.txt")
+
+(defn part-two
+  [filename]
+  (let [cave (get-cave filename)
+        {:keys [cave offset-col]} cave
+        start-loc [0 (- 500 offset-col)]]
+    (loop [cave (m/clone cave)
+           prev-loc start-loc
+           loc (new-location start-loc cave)
+           num-drops 0]
+      (cond
+        (= (m/mget cave 0 (second start-loc)) 1.0) cave
+        (nil? loc) (do
+                     (println "on to drop" (inc num-drops))
+                     (m/mset! cave (first prev-loc) (second prev-loc) 1.0)
+                     (recur cave start-loc (new-location start-loc cave) (inc num-drops)))
+        :else (recur cave loc (new-location prev-loc cave) num-drops)))))
+
+(def c (part-two "day14_sample.txt"))
+(def c (part-two "day14.txt"))
+
+(def cave (get-cave "day14_sample.txt"))
+(def cave (get-cave "day14.txt"))
+cave
 
 (doseq [tmp (->> (:cave cave)
                  flatten
                  (replace {0.0 "." 1.0 "#"})
-                 (partition cols)
-                 (map str/join))]
+                 (partition (m/column-count (:cave cave)))
+                 (map str/join)
+                 )]
+  (println tmp))
+
+c
+(doseq [tmp (->> c
+                 flatten
+                 (replace {0.0 "." 1.0 "#"})
+                 (partition (m/column-count c))
+                 (map str/join)
+                 )]
   (println tmp))
 
 (map #(reduce + %) (m/rows (:cave cave)))
