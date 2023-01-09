@@ -68,7 +68,6 @@
   (let [c (:cave cave)
         [num-rows num-cols] (m/shape c)]
     (m/set-row! c (dec num-rows) (repeat num-cols 1.0))
-    ;; (m/set-row! c (dec (dec num-rows)) (repeat num-cols 1.0))
     (assoc cave :cave c)))
 
 (defn get-cave
@@ -134,6 +133,7 @@
 (part-two "day14.txt")
 
 ;; fun cave drawing stuff
+
 ;; (def cave (get-cave "day14_sample.txt"))
 ;; (def cave (get-cave "day14.txt"))
 ;; cave
