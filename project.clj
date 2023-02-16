@@ -5,4 +5,4 @@
                  [net.mikera/core.matrix "0.63.0"]
                  [org.clojure/data.priority-map "1.1.0"]
                  [org.ejml/ejml-all "0.41.1"]
-                 ])
+                 [org.clojure/math.combinatorics "0.1.5"]])
