@@ -1,62 +1,60 @@
-use core::iter::Sum;
-use std::fmt::Debug;
-use std::fs;
-use std::str::FromStr;
+use anyhow::Result;
+use nom::{
+    character::complete::{line_ending, u32 as nom_u32},
+    combinator::map,
+    multi::separated_list1,
+    sequence::pair,
+    IResult,
+};
 
-fn parse_input<T: Sum + FromStr>(filename: &str) -> Vec<T>
-where
-    <T as FromStr>::Err: Debug,
-{
-    let contents = fs::read(filename).expect("couldn't read file {filename}");
-    String::from_utf8(contents)
-        .expect("contents not valid utf-8")
-        .strip_suffix('\n')
-        .expect("cannot strip suffix")
-        .split("\n\n")
-        .collect::<Vec<&str>>()
-        .into_iter()
-        .map(|x| {
-            x.split('\n')
-                .map(|x| x.parse::<T>().expect("cannot parse int from str"))
-                .sum::<T>()
-        })
-        .collect::<Vec<T>>()
+fn parse(input: &str) -> IResult<&str, Vec<u32>> {
+    separated_list1(pair(line_ending, line_ending), parse_lines)(input)
+}
+
+fn parse_lines(input: &str) -> IResult<&str, u32> {
+    map(separated_list1(line_ending, nom_u32), |items| {
+        items.iter().sum()
+    })(input)
+}
+
+fn parse_input(input: &'static str) -> Result<Vec<u32>> {
+    let (_, input) = parse(input)?;
+    Ok(input)
 }
 
 #[allow(unused)]
-fn part1(filename: &str) -> i32 {
-    parse_input(filename)
+pub fn part1(filename: &'static str) -> Result<u32> {
+    Ok(parse_input(filename)?
         .into_iter()
         .max()
-        .expect("cannot take max")
+        .expect("cannot take max"))
 }
 
 #[allow(unused)]
-fn part2(filename: &str) -> i32 {
-    let mut input: Vec<i32> = parse_input(filename);
+fn part2(mut filename: &'static str) -> Result<u32> {
+    let mut input = parse_input(filename)?;
     input.sort();
-    input.into_iter().rev().take(3).sum()
+    Ok(input.into_iter().rev().take(3).sum())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    const SAMPLE_TEXT: &str =
+        include_str!("/home/steve/Documents/advent-of-code-2022/data/day01_sample.txt");
+    const INPUT_TEXT: &str =
+        include_str!("/home/steve/Documents/advent-of-code-2022/data/day01.txt");
+
     #[test]
     fn test_part1() {
-        let m = part1("/home/steve/Documents/advent-of-code-2022/data/day01_sample.txt");
-        assert_eq!(m, 24000);
-
-        let m = part1("/home/steve/Documents/advent-of-code-2022/data/day01.txt");
-        assert_eq!(m, 70509);
+        assert_eq!(part1(SAMPLE_TEXT).unwrap(), 24000);
+        assert_eq!(part1(INPUT_TEXT).unwrap(), 70509);
     }
 
     #[test]
     fn test_part2() {
-        let m = part2("/home/steve/Documents/advent-of-code-2022/data/day01_sample.txt");
-        assert_eq!(m, 45000);
-
-        let m = part2("/home/steve/Documents/advent-of-code-2022/data/day01.txt");
-        assert_eq!(m, 208567);
+        assert_eq!(part2(SAMPLE_TEXT).unwrap(), 45000);
+        assert_eq!(part2(INPUT_TEXT).unwrap(), 208567);
     }
 }
